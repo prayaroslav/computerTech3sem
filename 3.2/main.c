@@ -1,4 +1,4 @@
-#define BLOCK_SIZE 4
+#define BLOCK_SIZE 1024
 
 #include <stdio.h>
 #include <fcntl.h>
