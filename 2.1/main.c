@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
-
+//test add
 ssize_t writeall(int fd, const void *buf, size_t count)
 {
 	size_t bytes_written = 0;
