@@ -9,19 +9,19 @@
 #include <unistd.h>
 #include <time.h>
 #include <poll.h>
-#include<sys/stat.h>
+#include <sys/stat.h>
 
 #define MAX_LEN 1024 /*длина пути для директории*/
 
-int add_watches(int fd, char *root) //установка inotify на все директории
+int add_watches_to_dir(int fd, char *root) //установка inotify на все директории
 {
 	int wd;
 	char *abs_dir; //название директории
 	struct dirent *entry;
-	DIR *dp;
+	DIR *DIRFD;
 
-	dp = opendir(root); //открытие директории
-	if (dp == NULL) //ошибка при открытии
+	DIRFD = opendir(root); //открытие директории
+	if (DIRFD == NULL) //ошибка при открытии
 	{
 		perror("Error opening the starting directory");
 		return 1;
@@ -39,7 +39,7 @@ int add_watches(int fd, char *root) //установка inotify на все д�
 	}
 
 	abs_dir = (char *)malloc(MAX_LEN);
-	while((entry = readdir(dp))) //выход при прочтении всей директории
+	while((entry = readdir(DIRFD))) //выход при прочтении всей директории
 	{ 
 		if (entry->d_type == DT_DIR && entry->d_name[0] != '.') //если директория и не ../ или ./
 		{		
@@ -58,7 +58,7 @@ int add_watches(int fd, char *root) //установка inotify на все д�
 		}
 	}
   
-	closedir(dp); //закрытие директории
+	closedir(DIRFD); //закрытие директории
 	free(abs_dir);//освобождение памяти
 	return 0;
 }
@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
 	
 	if((buf.st_mode & S_IFMT) ==  S_IFDIR) //если директория
 	{
-	    if(add_watches(fd, argv[1]) != 0) //установка inotify на все директории
+	    if(add_watches_to_dir(fd, argv[1]) != 0) //установка inotify на все директории
 	    		exit(1); //выход если ошибка
     }	
     else
