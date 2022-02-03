@@ -68,7 +68,7 @@ void print_events(int fd, char* argv)
 	}
 }
 
-volatile int watch_flag = 1;
+unsigned short watch_flag = 1;
 int fd, pol, wd;
 struct pollfd fds[1];
 
