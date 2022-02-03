@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
         inotify_rm_watch(fd, wd);
         close(fd);
         close(fds[0].fd);
-
+	close(fds[1].fd);
 
 	return 0;
 }
