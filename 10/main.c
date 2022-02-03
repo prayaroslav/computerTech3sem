@@ -11,58 +11,6 @@
 #include <poll.h>
 #include <sys/stat.h>
 
-#define MAX_LEN 1024 /*длина пути для директории*/
-
-int add_watches_to_dir(int fd, char *root) //установка inotify на все директории
-{
-	int wd;
-	char *abs_dir; //название директории
-	struct dirent *entry;
-	DIR *DIRFD;
-
-	DIRFD = opendir(root); //открытие директории
-	if (DIRFD == NULL) //ошибка при открытии
-	{
-		perror("Error opening the starting directory");
-		return 1;
-	}
-
-	wd = inotify_add_watch(fd, root, IN_CREATE | IN_MODIFY | IN_DELETE | IN_ATTRIB | IN_OPEN | IN_CLOSE | IN_MOVE); //установка inotify на директорию  
-	if (wd == -1) //ошибка
-	{
-		printf("Couldn't add watch to %s\n",root);
-		return -1;
-	}
-	else
-	{
-		printf("Watching:: %s\n",root); //успех
-	}
-
-	abs_dir = (char *)malloc(MAX_LEN);
-	while((entry = readdir(DIRFD))) //выход при прочтении всей директории
-	{ 
-		if (entry->d_type == DT_DIR && entry->d_name[0] != '.') //если директория и не ../ или ./
-		{		
-			strcpy(abs_dir,root); // копирование в abs_dir root
-			
-			if(root[strlen(root) - 1] != '/') //если root не заканчивается на /, то добавить 
-				strcat(abs_dir,"/");
-			
-			strcat(abs_dir,entry->d_name); 
-
-			wd = inotify_add_watch(fd, abs_dir, IN_CREATE | IN_MODIFY | IN_DELETE | IN_ATTRIB | IN_OPEN | IN_CLOSE | IN_MOVE); //установка inotify на найденную директорию
-			if (wd == -1) //ошибка
-				printf("Couldn't add watch to the directory %s\n",abs_dir);
-			else
-				printf("Watching:: %s\n",abs_dir); // успех
-		}
-	}
-  
-	closedir(DIRFD); //закрытие директории
-	free(abs_dir);//освобождение памяти
-	return 0;
-}
-
 unsigned int BUF_SIZE = 64;
 
 char* get_UTC_time(char* str, const time_t* s_time, unsigned buf_size) 
@@ -86,7 +34,6 @@ void print_events(int fd, char* argv)
 	const struct inotify_event *event;
 	ssize_t len = 1;
 	char *ptr;
-	int flag_print = 0; 
 
 	while(len > 0) 
 	{
@@ -101,64 +48,20 @@ void print_events(int fd, char* argv)
 		for (ptr = buf; ptr < buf + len; ptr = ptr + sizeof(struct inotify_event) + event->len) 
 		{
 			event = (const struct inotify_event *) ptr;
-			flag_print = 0;
 			time_t cur_time = time(NULL);
 
 			printf("%s | ", get_UTC_time(time_buf, &cur_time, BUF_SIZE)); //вывод времени в UTC
-            //вывод события
-			if (event->mask & IN_OPEN)
-			{
-				flag_print = 1;
-				printf("IN_OPEN:          	");
-			}
-			if (event->mask & IN_CLOSE_NOWRITE)
-			{
-				flag_print = 1;
-				printf("IN_CLOSE_NOWRITE: 	");
-			}
-			if (event->mask & IN_CLOSE_WRITE)
-			{
-				flag_print = 1;
-				printf("IN_CLOSE_WRITE:   	");
-			}
-			if (event->mask & IN_ACCESS)
-			{
-				flag_print = 1;
-				printf("IN_ACCESS:       	");
-			}
+            		//вывод события
+			
 			if (event->mask & IN_CREATE)
 			{
-				flag_print = 1;
-				printf("IN_CREATE:        	");
-			}
-			if (event->mask & IN_DELETE)
-			{
-				flag_print = 1;
-				printf("IN_DELETE:        	");
-			}
-			if (event->mask & IN_MODIFY)
-			{
-				flag_print = 1;
-				printf("IN_MODIFY:        	");
-			}
-			if (event->mask & IN_ATTRIB)
-			{
-				flag_print = 1;
-				printf("IN_ATTRIB:        	");
-			}
-
-			
-			if(flag_print == 1) //если событие напечатано
-			{
+				printf("New file has been created. File name: ");
 				if (event->len > 0)
-					printf("%s", event->name); //имя файла, если событие было для файла
-				else
-					printf("%s", argv);
-
+					printf("%s ", event->name);
 				if (event->mask & IN_ISDIR)
-					printf(" [dir] \n"); //объект этого события каталог
+					printf("[dir] \n");
 				else
-					printf(" [reg]\n"); //объект этого события файл
+					printf("[file] \n");
 			}
 		}
 	}
@@ -187,20 +90,8 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	
-	if(lstat(argv[1], &buf) < 0) //ошибка при чтении информации файла
-	{
-		perror("lstat");
-		return 1;
-	}
-	
-	if((buf.st_mode & S_IFMT) ==  S_IFDIR) //если директория
-	{
-	    if(add_watches_to_dir(fd, argv[1]) != 0) //установка inotify на все директории
-	    		exit(1); //выход если ошибка
-    }	
-    else
         printf("Watching:: %s\n", argv[1]);
-		wd = inotify_add_watch(fd, argv[1], IN_CREATE | IN_MODIFY | IN_DELETE | IN_ATTRIB | IN_OPEN | IN_CLOSE | IN_MOVE); // установка inotify на файл
+	wd = inotify_add_watch(fd, argv[1], IN_CREATE); // установка inotify на файл
 		
 	if(wd == -1) // ошибка при установке inotify
 	{
