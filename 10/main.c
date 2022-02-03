@@ -129,7 +129,10 @@ int main(int argc, char* argv[])
 	}
 	printf("watching for events stopped.\n");
 
-	close(fd);
+        inotify_rm_watch(fd, wd);
+        close(fd);
+        close(fds[0].fd);
+
 
 	return 0;
 }
