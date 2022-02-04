@@ -67,7 +67,7 @@ void print_events(int fd, char* argv)
 					flag_move = 0;
                                 	time_t cur_time = time(NULL);
                                 	printf("%s | ", get_UTC_time(time_buf, &cur_time, BUF_SIZE));
-                                	printf("File was moved in watching directory. File name: ");
+                                	printf("File has been moved in watching directory. File name: ");
                                 	if (event->len > 0)
                                         	printf("%s ", event->name);
                                 	if (event->mask & IN_ISDIR)
