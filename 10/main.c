@@ -12,6 +12,8 @@
 #include <sys/stat.h>
 
 unsigned int BUF_SIZE = 64;
+unsigned short flag_move = 0;
+time_t flag_move_time;
 
 char* get_UTC_time(char* str, const time_t* s_time, unsigned buf_size) 
 {
@@ -27,34 +29,24 @@ char* get_UTC_time(char* str, const time_t* s_time, unsigned buf_size)
 
 void print_events(int fd, char* argv) 
 {
-
 	char time_buf[BUF_SIZE];
-
 	char buf[4096];
 	const struct inotify_event *event;
 	ssize_t len = 1;
 	char *ptr;
-
-	while(len > 0) 
+	
+	while((len = read(fd, buf, sizeof(buf))) > 0) 
 	{
-
-		len = read(fd, buf, sizeof(buf)); //чтение файлового дескриптора
-		if (len == -1 && errno != EAGAIN) //ошибка, при временной недоступности дескриптора не выходить
-		{
-			perror("read");
-			return;
-		}
-
+		
 		for (ptr = buf; ptr < buf + len; ptr = ptr + sizeof(struct inotify_event) + event->len) 
 		{
 			event = (const struct inotify_event *) ptr;
-			time_t cur_time = time(NULL);
-
-			printf("%s | ", get_UTC_time(time_buf, &cur_time, BUF_SIZE)); //вывод времени в UTC
             		//вывод события
 			
-			if (event->mask & IN_CREATE)
+			if (event->mask & IN_CREATE)//сообщить о создании файла
 			{
+				time_t cur_time = time(NULL);
+				printf("%s | ", get_UTC_time(time_buf, &cur_time, BUF_SIZE));
 				printf("New file has been created. File name: ");
 				if (event->len > 0)
 					printf("%s ", event->name);
@@ -63,9 +55,43 @@ void print_events(int fd, char* argv)
 				else
 					printf("[file] \n");
 			}
+			if (event->mask & IN_MOVED_FROM)//если файл был перемещен из директории, то взвести флаг и запомнить время данного события
+			{
+				flag_move_time = time(NULL);
+				flag_move = 1;
+			}
+			if (event->mask & IN_MOVED_TO)//если фай был перемещен в директорию
+			{
+				if (flag_move == 0 || time(NULL) > flag_move_time + 1)//если прошло более секунды с момента взведения флага или флаг не был ввзеден, то считать, что файл был перемещен в директорию
+				{
+					flag_move = 0;
+                                	time_t cur_time = time(NULL);
+                                	printf("%s | ", get_UTC_time(time_buf, &cur_time, BUF_SIZE));
+                                	printf("File was moved in watching directory. File name: ");
+                                	if (event->len > 0)
+                                        	printf("%s ", event->name);
+                                	if (event->mask & IN_ISDIR)
+                                        	printf("[dir] \n");
+                                	else
+                                	        printf("[file] \n");
+				}
+				else if (flag_move == 1)//в противном случае считать, что файл был переименован и ничего не выводить, сбросив флаг 
+					flag_move = 0;
+
+			}
+			
+			
 		}
+		
 	}
+        if (len == -1 && errno != EAGAIN) //ошибка, при временной недоступности дескриптора не выходить
+        {
+                perror("read");
+		return;
+        }
+
 }
+
 
 int main(int argc, char* argv[]) 
 {
@@ -91,7 +117,7 @@ int main(int argc, char* argv[])
 	}
 	
         printf("Watching:: %s\n", argv[1]);
-	wd = inotify_add_watch(fd, argv[1], IN_CREATE); // установка inotify на файл
+	wd = inotify_add_watch(fd, argv[1], IN_CREATE | IN_MOVED_TO | IN_MOVED_FROM); // установка inotify на файл
 		
 	if(wd == -1) // ошибка при установке inotify
 	{
@@ -107,9 +133,9 @@ int main(int argc, char* argv[])
 
 	printf("waiting for events\n\n");
 	
-	while (1) //бесконечный цикл с выводом событий
-	{
 
+	while (1) //бесконечный цикл с выводом событий
+	{	
 		pol = poll(fds, nfds, -1); //ожидание готовности файлового дескриптора
 
 		if (pol == -1) // ошибка
@@ -136,3 +162,4 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
+
