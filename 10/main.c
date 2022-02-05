@@ -47,7 +47,7 @@ void print_events(int fd, char* argv)
 				time_t cur_time = time(NULL);
 				printf("%s | ", get_UTC_time(time_buf, &cur_time, BUF_SIZE));
 				printf("New file has been created. File name: ");
-				//printf(" %d //", event->cookie);
+			
 				if (event->len > 0)
 					printf("%s ", event->name);
 				if (event->mask & IN_ISDIR)
