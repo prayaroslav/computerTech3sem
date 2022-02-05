@@ -1,3 +1,5 @@
+#define BUF_SIZE 64
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,9 +12,6 @@
 #include <time.h>
 #include <poll.h>
 #include <sys/stat.h>
-
-unsigned int BUF_SIZE = 64;
-uint32_t cookies;
 
 char* get_UTC_time(char* str, const time_t* s_time, unsigned buf_size) 
 {
@@ -33,7 +32,7 @@ void print_events(int fd, char* argv)
 	const struct inotify_event *event;
 	ssize_t len = 1;
 	char *ptr;
-	
+	static uint32_t cookies;
 	while((len = read(fd, buf, sizeof(buf))) > 0) 
 	{
 		
