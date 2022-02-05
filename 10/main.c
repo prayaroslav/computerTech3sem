@@ -12,8 +12,7 @@
 #include <sys/stat.h>
 
 unsigned int BUF_SIZE = 64;
-unsigned short flag_move = 0;
-time_t flag_move_time;
+uint32_t cookies;
 
 char* get_UTC_time(char* str, const time_t* s_time, unsigned buf_size) 
 {
@@ -48,6 +47,7 @@ void print_events(int fd, char* argv)
 				time_t cur_time = time(NULL);
 				printf("%s | ", get_UTC_time(time_buf, &cur_time, BUF_SIZE));
 				printf("New file has been created. File name: ");
+				//printf(" %d //", event->cookie);
 				if (event->len > 0)
 					printf("%s ", event->name);
 				if (event->mask & IN_ISDIR)
@@ -55,16 +55,12 @@ void print_events(int fd, char* argv)
 				else
 					printf("[file] \n");
 			}
-			if (event->mask & IN_MOVED_FROM)//если файл был перемещен из директории, то взвести флаг и запомнить время данного события
+			if (event->mask & IN_MOVED_FROM)
 			{
-				flag_move_time = time(NULL);
-				flag_move = 1;
+				cookies = event->cookie;
 			}
-			if (event->mask & IN_MOVED_TO)//если фай был перемещен в директорию
+			if (event->mask & IN_MOVED_TO && cookies != event->cookie)//если фай был перемещен в директорию
 			{
-				if (flag_move == 0 || time(NULL) > flag_move_time + 1)//если прошло более секунды с момента взведения флага или флаг не был ввзеден, то считать, что файл был перемещен в директорию
-				{
-					flag_move = 0;
                                 	time_t cur_time = time(NULL);
                                 	printf("%s | ", get_UTC_time(time_buf, &cur_time, BUF_SIZE));
                                 	printf("File has been moved in watching directory. File name: ");
@@ -74,9 +70,6 @@ void print_events(int fd, char* argv)
                                         	printf("[dir] \n");
                                 	else
                                 	        printf("[file] \n");
-				}
-				else if (flag_move == 1)//в противном случае считать, что файл был переименован и ничего не выводить, сбросив флаг 
-					flag_move = 0;
 
 			}
 			
