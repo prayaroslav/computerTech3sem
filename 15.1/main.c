@@ -20,7 +20,7 @@ void proc_info(const char* procname)
            "SID %d\n\n", procname, getpid(), getppid(), getpgid(0), getsid(0));
 }
 
-char * sig_name(int signum)
+const char * sig_name(int signum)
 {
 	switch(signum)
 	{
@@ -39,15 +39,8 @@ int main(int argc, char * argv[])
 
 	struct sigaction act;
 	act.sa_handler = sig_handler;
-	act.sa_flags = 0;
-	sigset_t set;
-	sigemptyset(&set);
-	sigaddset(&set, SIGTERM);
-	sigaddset(&set, SIGQUIT);
-	sigaddset(&set, SIGTSTP);
-	sigaddset(&set, SIGHUP);
-	sigaddset(&set, SIGINT);
-	act.sa_mask = set;
+	act.sa_flags = SA_RESTART;
+	sigfillset(&act.sa_mask);
 	sigaction(SIGTERM, &act, NULL);
 	sigaction(SIGQUIT, &act, NULL);
 	sigaction(SIGTSTP, &act, NULL);
